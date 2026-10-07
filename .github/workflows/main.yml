@@ -1,0 +1,35 @@
+name: Build Noemi IPA
+on: [push]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v3
+        
+      - name: Crea la cartella Extension
+        run: |
+          mkdir ExtensionCode
+          cp manifest.json background.js icon.png ExtensionCode/
+          
+      - name: Converti in App iOS nativa
+        run: |
+          xcrun safari-web-extension-converter ExtensionCode --no-prompt --project-location ./ios-build --app-name Noemi --bundle-identifier com.noemi.sync
+          
+      - name: Compila il file eseguibile
+        run: |
+          cd ios-build/Noemi
+          xcodebuild -project "Noemi.xcodeproj" -scheme "Noemi (iOS)" -configuration Release -sdk iphoneos CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO SYMROOT=$(PWD)/build build
+          
+      - name: Crea il pacchetto .ipa per Sideloadly
+        run: |
+          mkdir -p Payload
+          cp -r ios-build/Noemi/build/Release-iphoneos/Noemi.app Payload/
+          zip -r Noemi.ipa Payload
+          
+      - name: Espelli il file
+        uses: actions/upload-artifact@v3
+        with:
+          name: Noemi-iOS-App
+          path: Noemi.ipa
